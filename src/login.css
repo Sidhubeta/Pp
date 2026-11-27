@@ -1,0 +1,215 @@
+/* PhonePe Spoof For iPhone & Android — login page (Style A "Vice sunset"), scoped to .zx */
+.zx {
+  --ink: #170d24;
+  --card: #22142f;
+  --card2: #2c1b3b;
+  --pink: #ff9ac1;
+  --green: #7cffb2;
+  --g2: rgba(255, 235, 245, 0.62);
+  --g3: rgba(255, 235, 245, 0.32);
+  --sep: rgba(255, 154, 193, 0.14);
+  --sunset: linear-gradient(90deg, #ffb27a 0%, #ff6ec7 55%, #b07bff 100%);
+  --sunset-text: linear-gradient(90deg, #ffd3a5 0%, #ff9ac1 45%, #c79bff 100%);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font: 17px/1.3 Inter, -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.015em;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.zx) *, :where(.zx) *::before, :where(.zx) *::after { box-sizing: border-box; min-width: 0; }
+:where(.zx) :where(button, input) { font: inherit; color: inherit; letter-spacing: inherit; border: 0; background: none; outline: none; margin: 0; }
+:where(.zx) button { cursor: pointer; }
+:where(.zx) a { color: inherit; text-decoration: none; }
+:where(.zx) :where(button, a):focus-visible { outline: 2px solid var(--pink); outline-offset: 2px; }
+.zx-an { font-family: Anton, Impact, "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: 0.02em; font-weight: 400; }
+.zx-mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.zx-grad { background: var(--sunset-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.zx-press { transition: transform 0.16s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s; }
+.zx-press:active:not(:disabled) { transform: scale(0.97); opacity: 0.88; }
+.zx-mat { background: rgba(23, 13, 36, 0.86); }
+
+/* background video — full-bleed inline playback across mobile browsers & APK WebView */
+.zx-bg {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  background: #120a1e url(/login-poster.jpg) center / cover;
+}
+.zx-bg video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.zx-bg::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(14,7,24,.9) 0%, rgba(14,7,24,.6) 30%, rgba(0,0,0,0) 44%, rgba(0,0,0,0) 72%, rgba(14,7,24,.8) 90%, rgba(14,7,24,.95) 100%);
+}
+
+.zx-screen {
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center;
+  padding: max(env(safe-area-inset-top), 20px) 20px max(env(safe-area-inset-bottom), 24px);
+  transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s;
+}
+.zx-col { width: 100%; max-width: 400px; }
+.zx-login-top { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 44px; }
+.zx-login.away { transform: translateX(-28%); opacity: 0.4; }
+
+.zx h1.zx-title { margin: 0; font-size: 40px; line-height: 1; }
+.zx-sub { margin: 8px 0 0; text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.11em; color: #ffc8e0; font-weight: 600; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+
+.zx-field {
+  margin-top: 20px; height: 58px; border-radius: 14px; display: flex; align-items: center; padding: 0 8px 0 18px; gap: 8px;
+  border: 1.5px solid transparent;
+  background: linear-gradient(rgba(18,10,30,.92), rgba(18,10,30,.92)) padding-box, var(--sunset) border-box;
+  transition: box-shadow 0.2s ease;
+}
+.zx-field:focus-within {
+  box-shadow: 0 0 0 2px rgba(255, 154, 193, 0.22);
+}
+.zx .zx-field input {
+  flex: 1; height: 100%; font-size: 19px; letter-spacing: 0.05em; text-transform: uppercase;
+  caret-color: var(--pink); border: 0 !important; outline: none !important; box-shadow: none !important;
+  background: transparent !important; text-decoration: none !important;
+  -webkit-appearance: none; appearance: none;
+}
+.zx .zx-field input:focus,
+.zx .zx-field input:focus-visible,
+.zx .zx-qty:focus,
+.zx .zx-qty:focus-visible {
+  outline: none !important; box-shadow: none !important; border: 0 !important;
+}
+.zx .zx-field input::selection {
+  background: rgba(255, 154, 193, 0.28);
+  color: #fff;
+}
+.zx .zx-field input:-webkit-autofill,
+.zx .zx-field input:-webkit-autofill:hover,
+.zx .zx-field input:-webkit-autofill:focus,
+.zx .zx-field input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0 1000px #120a1e inset !important;
+  box-shadow: 0 0 0 1000px #120a1e inset !important;
+  caret-color: var(--pink) !important;
+  transition: background-color 99999s ease-in-out 0s;
+}
+.zx-field input::placeholder { color: var(--g3); letter-spacing: 0.05em; }
+.zx-field .zx-paste { color: var(--pink); font-size: 15px; letter-spacing: 0.06em; padding: 8px 10px; border-radius: 12px; }
+.zx-clear { width: 20px; height: 20px; border-radius: 10px; background: #8e8e93; color: #000; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex: none; }
+
+.zx-err { margin: 0; padding: 8px 6px 0; font-size: 13px; color: #ff8fa3; text-align: left; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.zx-err:empty { padding: 0; }
+
+.zx-btn { width: 100%; height: 56px; border-radius: 14px; background: var(--sunset); color: #2a0e2e; font-size: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.zx-btn:disabled { opacity: 0.4; }
+.zx-unlock { margin-top: 10px; }
+.zx-spin { width: 20px; height: 20px; border: 2.5px solid rgba(42,14,46,.3); border-top-color: #2a0e2e; border-radius: 50%; animation: zx-spin 0.8s linear infinite; }
+@keyframes zx-spin { to { transform: rotate(360deg); } }
+@keyframes zx-shake { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-8px)} 40%,60%{transform:translateX(8px)} }
+.zx-shake { animation: zx-shake 0.45s; }
+
+.zx-buy { width: 100%; height: 58px; border-radius: 14px; display: flex; align-items: center; padding: 0 18px; gap: 12px; box-shadow: inset 0 0 0 1px rgba(255,154,193,.35); }
+.zx-buy .zx-an { font-size: 22px; }
+.zx-buy .zx-from { margin-left: auto; font-size: 14px; color: rgba(255,255,255,.65); }
+.zx-buy .zx-from b { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 20px; margin-left: 4px; }
+
+/* Slim ("patla") Telegram trigger button below Buy Keys */
+.zx-tg {
+  margin-top: 10px;
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  box-shadow: inset 0 0 0 1px rgba(41, 182, 246, 0.28);
+}
+.zx-tg-txt {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.88);
+}
+.zx-tg-dot {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 12px;
+}
+.zx-tg-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 235, 245, 0.52);
+  letter-spacing: 0.01em;
+}
+.zx-opt .zx-chev {
+  margin-left: auto;
+  color: var(--g3);
+  flex: none;
+}
+
+.zx-sound { position: absolute; z-index: 3; top: max(env(safe-area-inset-top), 14px); right: 16px; width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
+
+/* sheet */
+.zx-dim { position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.zx-dim.on { opacity: 1; pointer-events: auto; }
+.zx-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; margin: 0 auto; max-width: 440px; background: var(--ink);
+  border-radius: 22px 22px 0 0; box-shadow: inset 0 1px 0 rgba(255,154,193,.35);
+  padding: 6px 16px max(env(safe-area-inset-bottom), 24px); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.zx-sheet.on { transform: none; }
+.zx-grab { width: 36px; height: 5px; border-radius: 3px; background: #4a3458; margin: 0 auto 14px; }
+.zx-sheet h3 { margin: 0; text-align: center; font-size: 32px; }
+.zx-sheet p { margin: 6px 10px 16px; text-align: center; color: var(--g2); font-size: 15px; }
+.zx-opt { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; min-height: 76px; text-align: left; background: var(--card); border-radius: 14px; margin-top: 10px; }
+.zx-opt.hot { box-shadow: inset 0 0 0 1.5px var(--pink); }
+.zx-opt .zx-ic { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; color: #2a0e2e; font-family: Anton, Impact, sans-serif; font-size: 18px; }
+.zx-opt .zx-an { font-size: 21px; display: block; }
+.zx-opt .zx-d { font-size: 12px; color: var(--g2); }
+.zx-opt .zx-pr { margin-left: auto; text-align: right; font-family: Anton, Impact, sans-serif; font-size: 22px; white-space: nowrap; }
+.zx-opt .zx-pr small { display: block; font-family: Inter, system-ui, sans-serif; font-size: 12px; color: var(--g3); text-decoration: line-through; }
+
+/* success HUD */
+.zx-hud { position: absolute; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; pointer-events: none; animation: zx-fade 0.2s ease both; }
+.zx-hud > div { width: 160px; height: 160px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(23,13,36,.88); box-shadow: inset 0 0 0 1px rgba(255,154,193,.3); }
+.zx-hud span { font-size: 20px; }
+@keyframes zx-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* bulk */
+.zx-bulk { background: #0e0718; align-items: stretch; transform: translateX(100%); padding-left: 16px; padding-right: 16px; overflow-y: auto; }
+.zx-bulk.on { transform: none; }
+.zx-bulk-inner { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 400px; margin: 0 auto; }
+.zx-nav { height: 44px; display: flex; align-items: center; flex: none; }
+.zx-nav button { color: var(--pink); font-size: 17px; letter-spacing: 0.06em; display: flex; align-items: center; gap: 2px; margin-left: -6px; padding: 6px; }
+.zx-lt { margin: 8px 0 0; font-size: 44px; line-height: 1; }
+.zx-ls { margin-top: 8px; color: var(--g2); font-size: 15px; }
+.zx-ls s { color: var(--g3); }
+.zx-save { display: inline-block; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; padding: 3px 7px; border-radius: 6px; background: rgba(124,255,178,.15); color: var(--green); margin-left: 8px; vertical-align: middle; text-transform: uppercase; }
+.zx-lbl { color: var(--pink); font-size: 14px; letter-spacing: 0.12em; padding: 26px 4px 8px; margin: 0; }
+.zx-grp { background: var(--card); border-radius: 14px; overflow: hidden; }
+.zx-row { min-height: 56px; display: flex; align-items: center; padding: 0 16px; position: relative; gap: 10px; }
+.zx-row + .zx-row::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--sep); }
+.zx-qty { width: 80px; text-align: right; font-size: 30px; margin-left: auto; caret-color: var(--pink); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.zx-qty::-webkit-inner-spin-button, .zx-qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.zx-step { display: flex; gap: 8px; flex: none; }
+.zx-step button { width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid transparent; background: linear-gradient(var(--card2), var(--card2)) padding-box, var(--sunset) border-box; font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.zx-step button:disabled { opacity: 0.35; }
+.zx-chips { display: flex; gap: 8px; padding-top: 12px; flex-wrap: wrap; }
+.zx-chips button { background: var(--card); font-size: 17px; padding: 8px 18px; border-radius: 12px; letter-spacing: 0.04em; }
+.zx-chips button.on { background: var(--sunset); color: #2a0e2e; }
+.zx-ft { font-size: 13px; color: var(--g2); padding: 8px 4px 0; margin: 0; line-height: 1.35; }
+.zx-sum-v { margin-left: auto; color: var(--g2); font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.zx-sum-v b { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 20px; color: #fff; margin-left: 4px; }
+.zx-total { margin-left: auto; font-size: 30px; }
+.zx-cta { margin-top: auto; padding-top: 28px; }
+
+@media (max-height: 640px) {
+  .zx-login-top { padding-top: 32px; }
+  .zx h1.zx-title { font-size: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zx-screen, .zx-sheet { transition: none; }
+  .zx-shake { animation: none; }
+}
