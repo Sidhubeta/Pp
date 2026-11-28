@@ -35,16 +35,6 @@ function isIosDevice(): boolean {
   );
 }
 
-function isStandalonePwa(): boolean {
-  if (typeof window === "undefined") return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return (
-    window.matchMedia?.("(display-mode: standalone)").matches === true ||
-    window.matchMedia?.("(display-mode: fullscreen)").matches === true ||
-    nav.standalone === true
-  );
-}
-
 async function queryCameraPermission(): Promise<PermissionState | "unknown"> {
   if (typeof navigator === "undefined" || !navigator.permissions?.query) {
     return "unknown";
@@ -119,6 +109,9 @@ function ScanPage() {
               setError(null);
               setCameraStatus("starting");
               setCameraNonce((n) => n + 1);
+            } else if (status.state === "prompt") {
+              setError(null);
+              setCameraStatus("prompt");
             } else if (status.state === "denied") {
               setCameraStatus("denied");
             }
@@ -136,6 +129,9 @@ function ScanPage() {
             setError(null);
             setCameraStatus("starting");
             setCameraNonce((n) => n + 1);
+          } else if (state === "prompt" && cameraStatus === "denied") {
+            setError(null);
+            setCameraStatus("prompt");
           }
         });
       }
@@ -223,14 +219,19 @@ function ScanPage() {
         await scanner.start(constraint, { fps: 10, disableFlip: false }, onDecoded, () => {});
       };
 
+      const attemptStartedAt = Date.now();
       try {
         try {
           await startWithConstraint({ facingMode: "environment" });
         } catch (primaryErr) {
           const primaryName = getErrorName(primaryErr);
           const isPermErr =
-            /NotAllowed|PermissionDenied|SecurityError|denied|permission/i.test(primaryName) ||
-            /NotAllowed|PermissionDenied|permission/i.test(String(primaryErr));
+            /NotAllowed|PermissionDenied|PermissionDismissed|SecurityError|denied|dismissed|permission/i.test(
+              primaryName,
+            ) ||
+            /NotAllowed|PermissionDenied|PermissionDismissed|dismissed|permission/i.test(
+              String(primaryErr),
+            );
           if (isPermErr) throw primaryErr;
 
           await startWithConstraint({ facingMode: "user" });
@@ -239,29 +240,36 @@ function ScanPage() {
         if (cancelled) {
           await safeCleanup(scanner);
         } else {
+          // Camera granted & live — never show any permission prompt again
           setCameraStatus("active");
           setError(null);
         }
       } catch (err) {
         if (cancelled) return;
+        const elapsedMs = Date.now() - attemptStartedAt;
         await safeCleanup(scanner);
         const permAfter = await queryCameraPermission();
         if (cancelled) return;
 
         const errStr = `${getErrorName(err)} ${String(err ?? "")}`;
-        const looksBlocked =
-          permAfter === "denied" ||
-          /NotAllowedError|PermissionDeniedError|PermissionDismissedError|denied|not allowed|permission/i.test(
-            errStr,
-          );
 
         if (permAfter === "denied") {
           setCameraStatus("denied");
-        } else if (looksBlocked || permAfter === "prompt") {
-          setCameraStatus(isStandalonePwa() && permAfter !== "prompt" ? "denied" : "prompt");
+        } else if (permAfter === "prompt") {
+          // User dismissed the popup (Back / X / outside tap) — browser can still prompt again!
+          setCameraStatus("prompt");
         } else if (/NotFoundError|DevicesNotFoundError/i.test(errStr)) {
           setCameraStatus("error");
           setError("No camera found on this device. Use Upload QR below.");
+        } else if (
+          /PermissionDismissed/i.test(errStr) ||
+          (/NotAllowed|PermissionDenied|permission/i.test(errStr) && elapsedMs >= 250)
+        ) {
+          // Browser showed dialog and user dismissed it (iOS/WebKit without Permissions API)
+          setCameraStatus("prompt");
+        } else if (/NotAllowed|PermissionDenied|SecurityError/i.test(errStr) && elapsedMs < 250) {
+          // Instant rejection without dialog -> blocked or requires tap gesture
+          setCameraStatus("prompt");
         } else {
           setCameraStatus("prompt");
           setError("Tap Allow Camera below to start scanning.");
@@ -278,12 +286,14 @@ function ScanPage() {
     };
   }, [result, handleText, cameraNonce]);
 
-  // Direct user-gesture permission request — triggers native prompt if not permanently blocked,
-  // or shows clear feedback if browser has locked camera after Disallow.
+  // Direct user-gesture permission request — re-triggers native browser popup
+  // whenever user accidentally dismissed it, and opens camera permanently once Allowed.
   const requestCameraPermission = async () => {
     if (requestingPerm) return;
     setRequestingPerm(true);
     setError(null);
+    const clickedAt = Date.now();
+
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraStatus("error");
@@ -299,7 +309,7 @@ function ScanPage() {
         });
       } catch (firstErr) {
         const msg = `${getErrorName(firstErr)} ${String(firstErr ?? "")}`;
-        if (/NotAllowedError|PermissionDeniedError|SecurityError/i.test(msg)) {
+        if (/NotAllowedError|PermissionDeniedError|PermissionDismissedError|SecurityError/i.test(msg)) {
           throw firstErr;
         }
         stream = await navigator.mediaDevices.getUserMedia({
@@ -308,21 +318,44 @@ function ScanPage() {
         });
       }
 
+      // Permission granted! Release probe stream so live scanner starts cleanly.
       for (const track of stream.getTracks()) {
         track.stop();
       }
       setCameraStatus("starting");
       setCameraNonce((n) => n + 1);
     } catch (err) {
+      const elapsedMs = Date.now() - clickedAt;
       const perm = await queryCameraPermission();
       const msg = `${getErrorName(err)} ${String(err ?? "")}`;
-      if (perm === "denied" || /NotAllowedError|PermissionDeniedError|denied/i.test(msg)) {
+
+      if (perm === "prompt") {
+        // Still promptable (user dismissed the popup again) — keep Allow Camera button ready!
+        setCameraStatus("prompt");
+        setError("Permission dismissed. Tap Allow Camera and select Allow.");
+      } else if (perm === "denied") {
+        // Permanently blocked by browser after Disallow / repeated dismissals
         setCameraStatus("denied");
         setError(
           isIosDevice()
-            ? "Still blocked by Safari/iOS. Allow Camera in Settings, or tap Take QR Photo."
-            : "Still blocked by Chrome/Android. Enable Camera in Site Settings / App Info, or tap Take QR Photo.",
+            ? "Blocked by Safari/iOS. Allow Camera in Settings, or tap Take QR Photo."
+            : "Blocked by Chrome/Android. Enable Camera in Site Settings / App Info, or tap Take QR Photo.",
         );
+      } else if (/NotAllowed|PermissionDenied|SecurityError/i.test(msg)) {
+        // Browsers without Permissions API (iOS Safari):
+        // Instant rejection (<250ms) means OS/Safari permanently blocked it without showing a dialog.
+        if (elapsedMs < 250) {
+          setCameraStatus("denied");
+          setError(
+            isIosDevice()
+              ? "Blocked by Safari/iOS. Allow Camera in Settings, or tap Take QR Photo."
+              : "Camera is blocked in browser settings. Enable Camera or tap Take QR Photo.",
+          );
+        } else {
+          // Dialog was shown and dismissed -> stay on Allow Camera so user can tap again
+          setCameraStatus("prompt");
+          setError("Permission dismissed. Tap Allow Camera and select Allow.");
+        }
       } else {
         setCameraStatus("error");
         setError("Could not open live camera. Tap Take QR Photo or Upload QR.");
@@ -478,7 +511,7 @@ function ScanPage() {
                   <p className="text-[10.5px] leading-snug text-white/70">
                     {ios
                       ? "Phone blocked live camera. Enable in Settings → Safari → Camera, or snap a QR photo below."
-                      : "Browser blocked live camera after Disallow. Enable in App Info / Chrome Site Settings → Camera, or snap a QR photo below."}
+                      : "Browser blocked live camera. Enable in App Info / Chrome Site Settings → Camera, or snap a QR photo below."}
                   </p>
                 ) : (
                   <p className="text-[11px] leading-snug text-white/70">
