@@ -80,6 +80,7 @@ function ScanPage() {
   const scannerRef = useRef<Scanner | null>(null);
   const handledRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const captureRef = useRef<HTMLInputElement>(null);
 
   const handleText = useCallback(
     (text: string) => {
@@ -101,7 +102,7 @@ function ScanPage() {
     [navigate],
   );
 
-  // Auto-restart camera if user grants camera permission in browser/phone settings and returns
+  // Auto-restart live camera when user enables Camera permission in Settings and returns
   useEffect(() => {
     let permStatus: PermissionStatus | null = null;
     let active = true;
@@ -179,12 +180,11 @@ function ScanPage() {
       if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
         if (!cancelled) {
           setCameraStatus("error");
-          setError("Camera is not supported in this browser. Use Upload QR below.");
+          setError("Live camera not supported here. Use Take QR Photo or Upload QR.");
         }
         return;
       }
 
-      // Check existing permission state before auto-starting
       const initialPerm = await queryCameraPermission();
       if (cancelled) return;
       if (initialPerm === "denied") {
@@ -233,7 +233,6 @@ function ScanPage() {
             /NotAllowed|PermissionDenied|permission/i.test(String(primaryErr));
           if (isPermErr) throw primaryErr;
 
-          // Fallback for devices without a rear camera or strict facingMode support
           await startWithConstraint({ facingMode: "user" });
         }
 
@@ -259,14 +258,13 @@ function ScanPage() {
         if (permAfter === "denied") {
           setCameraStatus("denied");
         } else if (looksBlocked || permAfter === "prompt") {
-          // On iOS/Android PWAs, auto-start without a tap can be dismissed — show Allow button
           setCameraStatus(isStandalonePwa() && permAfter !== "prompt" ? "denied" : "prompt");
         } else if (/NotFoundError|DevicesNotFoundError/i.test(errStr)) {
           setCameraStatus("error");
           setError("No camera found on this device. Use Upload QR below.");
         } else {
           setCameraStatus("prompt");
-          setError("Camera could not start automatically. Tap Allow Camera below.");
+          setError("Tap Allow Camera below to start scanning.");
         }
       }
     })();
@@ -280,7 +278,8 @@ function ScanPage() {
     };
   }, [result, handleText, cameraNonce]);
 
-  // Direct user-gesture permission request — reliably triggers native browser/PWA dialog
+  // Direct user-gesture permission request — triggers native prompt if not permanently blocked,
+  // or shows clear feedback if browser has locked camera after Disallow.
   const requestCameraPermission = async () => {
     if (requestingPerm) return;
     setRequestingPerm(true);
@@ -288,7 +287,7 @@ function ScanPage() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         setCameraStatus("error");
-        setError("Camera is not supported here. Use Upload QR below.");
+        setError("Live camera not supported here. Use Take QR Photo or Upload QR.");
         return;
       }
 
@@ -309,7 +308,6 @@ function ScanPage() {
         });
       }
 
-      // Permission granted! Release probe stream so Html5Qrcode can open camera cleanly.
       for (const track of stream.getTracks()) {
         track.stop();
       }
@@ -320,9 +318,14 @@ function ScanPage() {
       const msg = `${getErrorName(err)} ${String(err ?? "")}`;
       if (perm === "denied" || /NotAllowedError|PermissionDeniedError|denied/i.test(msg)) {
         setCameraStatus("denied");
+        setError(
+          isIosDevice()
+            ? "Still blocked by Safari/iOS. Allow Camera in Settings, or tap Take QR Photo."
+            : "Still blocked by Chrome/Android. Enable Camera in Site Settings / App Info, or tap Take QR Photo.",
+        );
       } else {
         setCameraStatus("error");
-        setError("Could not open camera. Please check camera settings or use Upload QR.");
+        setError("Could not open live camera. Tap Take QR Photo or Upload QR.");
       }
     } finally {
       setRequestingPerm(false);
@@ -343,10 +346,7 @@ function ScanPage() {
     }
   };
 
-  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
+  const scanQrImageFile = async (file: File) => {
     setError(null);
     try {
       let s = scannerRef.current;
@@ -361,9 +361,18 @@ function ScanPage() {
       const text = await s.scanFile(file, false);
       handleText(text);
     } catch {
-      setError("No QR code found in this image.");
-      setCameraNonce((n) => n + 1);
+      setError("No QR code found in this photo. Try again with a clearer shot.");
+      if (cameraStatus === "active") {
+        setCameraNonce((n) => n + 1);
+      }
     }
+  };
+
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    await scanQrImageFile(file);
   };
 
   const ios = isIosDevice();
@@ -432,7 +441,7 @@ function ScanPage() {
 
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-4">
           {/* Clean viewfinder window with spotlight dim cutout */}
-          <div className="relative aspect-square w-[min(74vw,286px,40dvh)] rounded-[22px] shadow-[0_0_0_9999px_rgba(0,0,0,0.52)]">
+          <div className="relative aspect-square w-[min(78vw,300px,42dvh)] rounded-[22px] shadow-[0_0_0_9999px_rgba(0,0,0,0.52)]">
             {!result && !showPermissionCard && (
               <LottiePlayer
                 path="/animations/qr_scanning.json"
@@ -444,11 +453,11 @@ function ScanPage() {
             )}
 
             {showPermissionCard && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 rounded-[22px] border border-white/15 bg-[#18161c]/95 p-4 text-center backdrop-blur-md">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#8a3ffc]/20 text-[#c084fc]">
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-[22px] border border-white/15 bg-[#18161c]/95 px-4 py-3 text-center backdrop-blur-md">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#8a3ffc]/20 text-[#c084fc]">
                   <svg
-                    width="22"
-                    height="22"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -461,34 +470,50 @@ function ScanPage() {
                   </svg>
                 </div>
 
-                <p className="text-[14px] font-semibold leading-tight text-white">
+                <p className="text-[13.5px] font-semibold leading-tight text-white">
                   {cameraStatus === "denied" ? "Camera Permission Blocked" : "Allow Camera Access"}
                 </p>
 
                 {cameraStatus === "denied" ? (
-                  <p className="text-[11px] leading-snug text-white/70">
+                  <p className="text-[10.5px] leading-snug text-white/70">
                     {ios
-                      ? "Go to iPhone Settings → Safari → Camera → Allow, then tap Enable Camera."
-                      : "Turn on Camera in App Info → Permissions (or Chrome → Site Settings → Camera), then tap Try Again."}
+                      ? "Phone blocked live camera. Enable in Settings → Safari → Camera, or snap a QR photo below."
+                      : "Browser blocked live camera after Disallow. Enable in App Info / Chrome Site Settings → Camera, or snap a QR photo below."}
                   </p>
                 ) : (
                   <p className="text-[11px] leading-snug text-white/70">
-                    Tap below to allow camera permission for scanning QR codes.
+                    Tap below to allow camera permission for live QR scanning.
                   </p>
                 )}
 
-                <button
-                  type="button"
-                  disabled={requestingPerm}
-                  onClick={() => void requestCameraPermission()}
-                  className="mt-1 w-full rounded-full bg-[#8a3ffc] px-4 py-2 text-[13px] font-semibold text-white transition-opacity active:opacity-80 disabled:opacity-60"
-                >
-                  {requestingPerm
-                    ? "Requesting..."
-                    : cameraStatus === "denied"
-                      ? "Enable Camera / Try Again"
-                      : "Allow Camera"}
-                </button>
+                {cameraStatus === "denied" ? (
+                  <div className="mt-0.5 flex w-full flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => captureRef.current?.click()}
+                      className="w-full rounded-full bg-[#8a3ffc] px-3.5 py-2 text-[12.5px] font-semibold text-white transition-opacity active:opacity-80"
+                    >
+                      Take QR Photo (Camera)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={requestingPerm}
+                      onClick={() => void requestCameraPermission()}
+                      className="w-full rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[11.5px] font-medium text-white/90 transition-opacity active:opacity-80 disabled:opacity-60"
+                    >
+                      {requestingPerm ? "Checking..." : "I Enabled Camera — Retry"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={requestingPerm}
+                    onClick={() => void requestCameraPermission()}
+                    className="mt-1 w-full rounded-full bg-[#8a3ffc] px-4 py-2 text-[13px] font-semibold text-white transition-opacity active:opacity-80 disabled:opacity-60"
+                  >
+                    {requestingPerm ? "Requesting..." : "Allow Camera"}
+                  </button>
+                )}
               </div>
             )}
 
@@ -543,11 +568,19 @@ function ScanPage() {
           </div>
 
           {error && (
-            <p className="relative z-20 mt-3 rounded-full bg-black/50 px-4 py-1 text-center text-xs text-red-300">
+            <p className="relative z-20 mt-3 max-w-[320px] rounded-2xl bg-black/60 px-4 py-1.5 text-center text-xs text-red-300">
               {error}
             </p>
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onUpload} />
+          <input
+            ref={captureRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={onUpload}
+          />
         </div>
 
         <div className="relative z-20 flex shrink-0 items-center justify-center pb-2">
