@@ -72,11 +72,11 @@ function applySecurityHeaders(headers: Headers, request: Request, pathname: stri
   headers.set("X-Frame-Options", "DENY");
   headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   headers.set("Accept-CH", "Sec-CH-UA-Model, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version");
+  // Allow camera on same-origin across all routes so PWA (Add to Home Screen)
+  // and SPA navigations starting on "/" or "/login" can request camera on "/scan".
   headers.set(
     "Permissions-Policy",
-    pathname === "/scan"
-      ? "camera=(self), microphone=(), geolocation=()"
-      : "camera=(), microphone=(), geolocation=()",
+    "camera=(self), microphone=(), geolocation=()",
   );
 
   if (isHttpsRequest(request)) {
